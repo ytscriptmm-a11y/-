@@ -1,10 +1,11 @@
 import streamlit as st
 import google.generativeai as genai
 import io
+import time
 
 # 1. Page Configuration
-st.set_page_config(page_title="Burmese Cat Story Pro", layout="wide")
-st.title("🐱 Burmese Cat Story Creator (Multi-Model)")
+st.set_page_config(page_title="Silent Cat Movie Maker", layout="wide")
+st.title("🐱 Silent Cat Movie Maker (Visual Script Only)")
 
 # 2. API Key Setup
 if "GEMINI_API_KEY" in st.secrets:
@@ -12,8 +13,8 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     api_key = st.sidebar.text_input("Gemini API Key", type="password")
 
-# --- SIDEBAR: Model Selection ---
-st.sidebar.header("⚙️ Model Settings")
+# --- SIDEBAR SETTINGS ---
+st.sidebar.header("⚙️ Settings")
 
 # User's Custom Model List
 text_model_options = [
@@ -24,14 +25,12 @@ text_model_options = [
     "models/gemini-3-flash-preview",
     "models/gemini-3-pro-preview"
 ]
+selected_model = st.sidebar.selectbox("Select Model:", model_options, index=0)
 
-selected_model = st.sidebar.selectbox(
-    "Story Generation Model:",
-    text_model_options,
-    index=0
-)
+# Scene Count Slider (ဒီကောင်ပျောက်နေလို့ Error တက်တာပါ - အခုပြန်ထည့်ထားပါတယ်)
+num_scenes_input = st.sidebar.slider("Scene အရေအတွက် (ပုံအရေအတွက်)", 4, 15, 8)
 
-st.sidebar.info(f"Using for Images: models/gemini-3-pro-image-preview")
+st.sidebar.info("Note: No Audio (TTS) - Visual Script Only")
 
 # 3. Session State
 if 'step' not in st.session_state: st.session_state.step = 1
@@ -41,20 +40,20 @@ if 'final_data' not in st.session_state: st.session_state.final_data = []
 
 # --- Functions ---
 
-def generate_burmese_story(topic, model_name):
-    """အဆင့် (၁) - ရွေးထားသော Model ဖြင့် ဇာတ်လမ်းရေးခြင်း"""
+def generate_visual_script(topic, model_name):
+    """Step 1: Silent Movie Script (No Dialogue)"""
     try:
         model = genai.GenerativeModel(model_name)
         prompt = f"""
         You are a Video Scriptwriter for a viral 'Silent Cat Movie'.
         Topic: '{topic}'
 
-        Rules for the Script:
-        1. NO Dialogue. NO Narration/Voiceover.
-        2. Focus ONLY on Visual Actions: Describe the cat's body language, expressions, and interactions with the environment to tell the story.
-        3. Language: Write the visual description in Burmese (So I can read and understand the flow).
-        4. Length: Create enough visual scenes for a 3-minute video.
-        5. Style: 'Show, Don't Tell'. (Instead of saying 'The cat was sad', write 'The cat lowered its ears and curled into a tight ball in the corner').
+        Rules:
+        1. NO Dialogue. NO Narration.
+        2. Focus ONLY on Visual Actions (Body language, expressions, environment).
+        3. Language: Write the visual description in Burmese.
+        4. Length: Create enough content for a 3-minute video.
+        5. Style: Show, Don't Tell.
 
         Output: Just write the visual story flow in Burmese paragraphs.
         """
@@ -64,16 +63,25 @@ def generate_burmese_story(topic, model_name):
         st.error(f"Error with {model_name}: {e}")
         return None
 
-def generate_initial_prompts(burmese_text, model_name):
-    """အဆင့် (၂) - ပုံ Prompt ခွဲထုတ်ခြင်း"""
+def generate_scene_breakdown(script_text, model_name, scene_count):
+    """Step 2: Breakdown into Scenes with Image Prompts"""
     try:
         model = genai.GenerativeModel(model_name)
         prompt = f"""
-        Story: "{burmese_text}"
-        Split this into 4 scenes. For each scene, write an English Image Prompt for a 3D Pixar-style cat.
-        Output format:
-        Burmese: [Text]
-        English_Prompt: [Prompt]
+        Visual Script (Burmese): 
+        "{script_text}"
+        
+        Task:
+        1. Split this script into exactly {scene_count} distinct scenes.
+        2. For each scene, provide the Burmese Visual Action text.
+        3. For each scene, write an English Image Prompt (3D Pixar style cat).
+        
+        Output format strictly like this:
+        Burmese: [Visual Action Text]
+        English_Prompt: [Image Prompt]
+        ###
+        Burmese: [Next Action Text]
+        English_Prompt: [Next Image Prompt]
         ###
         """
         response = model.generate_content(prompt)
@@ -83,36 +91,40 @@ def generate_initial_prompts(burmese_text, model_name):
         return None
 
 def generate_preview_image(prompt):
-    """Gemini 3 Pro Image Preview ဖြင့် ပုံထုတ်ခြင်း"""
+    """Image Preview (Requires google-generativeai>=0.8.3)"""
     try:
-        # User သတ်မှတ်ထားသော Image Model
-        model = genai.GenerativeModel("models/gemini-3-pro-image-preview")
+        # Using Imagen 3 via Gemini API
+        model = genai.GenerativeModel("imagen-3.0-generate-001")
         result = model.generate_images(
             prompt=prompt + ", 3D render, cute cat, high quality, masterpiece",
             number_of_images=1,
         )
         return result.images[0]
     except Exception as e:
-        st.warning(f"Image Preview Error (Model not available?): {e}")
-        return None
+        # Fallback if specific model name fails or API issue
+        try:
+             model = genai.GenerativeModel("models/gemini-3-pro-image-preview")
+             result = model.generate_images(prompt=prompt, number_of_images=1)
+             return result.images[0]
+        except:
+            st.warning(f"Image Error: {e}")
+            return None
 
 def generate_final_3_prompts(image_prompt, model_name):
-    """အဆင့် (၃) - 3 Prompts ခွဲထုတ်ခြင်း"""
+    """Step 3: Platform Specific Prompts"""
     try:
         model = genai.GenerativeModel(model_name)
         prompt = f"""
         Based on: "{image_prompt}"
         Generate 3 prompts:
         IMAGE: Optimized for DALL-E 3
-        VIDEO: Optimized for Luma
-        MUSIC: Optimized for Suno
+        VIDEO: Optimized for Luma Dream Machine (Camera movement, action)
+        MUSIC: Optimized for Suno AI (Mood, instruments)
         """
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Error: {e}"
-
-
 
 # --- Main Workflow ---
 
@@ -123,42 +135,45 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 # Progress Bar
-steps = ["၁. ဇာတ်လမ်းရေး", "၂. ပုံ Prompt နှင့် အသံ", "၃. Final Output"]
+steps = ["၁. Visual Script ရေး", "၂. Scene ခွဲ & Preview", "၃. Final Output"]
 current_progress = (st.session_state.step / 3)
 st.progress(current_progress)
 st.subheader(f"အဆင့် {st.session_state.step}: {steps[st.session_state.step-1]}")
 
 # ----------------------------------------------------------------
-# STEP 1: Story Generation (Burmese)
+# STEP 1: Script Generation
 # ----------------------------------------------------------------
 if st.session_state.step == 1:
     with st.form("step1_form"):
-        topic = st.text_input("ဇာတ်လမ်းခေါင်းစဉ်", "ကျောပိုးအိတ်နဲ့ ခရီးသွားတဲ့ ကြောင်လေး")
-        submitted = st.form_submit_button("ဇာတ်လမ်း ရေးသားရန်")
+        topic = st.text_input("ဇာတ်လမ်းခေါင်းစဉ်", "မိုးရွာထဲ ကျန်ခဲ့တဲ့ ကြောင်လေး")
+        submitted = st.form_submit_button("Visual Script ရေးသားရန်")
         
         if submitted:
-            with st.spinner(f"{selected_model} ဖြင့် ဇာတ်လမ်းရေးနေပါသည်..."):
-                story = generate_burmese_story(topic, selected_model)
+            with st.spinner(f"Writing silent movie script..."):
+                story = generate_visual_script(topic, selected_model)
                 if story:
                     st.session_state.burmese_story = story
                     st.rerun()
 
     if st.session_state.burmese_story:
-        edited_story = st.text_area("ဇာတ်လမ်း (မြန်မာ) - ပြင်ဆင်နိုင်သည်", st.session_state.burmese_story, height=200)
+        st.info("အောက်ပါ Visual Script ကို ဖတ်ရှုပြင်ဆင်ပါ။")
+        edited_story = st.text_area("Visual Script (Burmese)", st.session_state.burmese_story, height=300)
         st.session_state.burmese_story = edited_story
         
-        if st.button("နောက်တစ်ဆင့်သွားမယ် >"):
-            st.session_state.step = 2
-            st.rerun()
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            if st.button("Next Step >"):
+                st.session_state.step = 2
+                st.rerun()
 
 # ----------------------------------------------------------------
-# STEP 2: Generate Draft Prompts (No Audio)
+# STEP 2: Breakdown & Image Preview
 # ----------------------------------------------------------------
 elif st.session_state.step == 2:
     if not st.session_state.scenes_data:
-        # Generate Raw Data
-        with st.spinner(f"ဗီဒီယို Script ကို Scene {num_scenes_input} ခုခွဲ၍ Prompt များထုတ်နေပါသည်..."):
-            raw_data = generate_initial_prompts(st.session_state.burmese_story, selected_model, num_scenes_input)
+        # HERE IS WHERE THE ERROR WAS: num_scenes_input is now defined in sidebar
+        with st.spinner(f"Breaking down into {num_scenes_input} scenes..."):
+            raw_data = generate_scene_breakdown(st.session_state.burmese_story, selected_model, num_scenes_input)
             if raw_data:
                 scenes = raw_data.split('###')
                 parsed_scenes = []
@@ -172,23 +187,23 @@ elif st.session_state.step == 2:
                             if "English_Prompt:" in line: eng_prompt = line.replace("English_Prompt:", "").strip()
                         
                         if burmese_text:
-                            # Audio generation removed
+                            # No Audio, just text and prompt
                             parsed_scenes.append({"text": burmese_text, "prompt": eng_prompt, "preview_img": None})
                 st.session_state.scenes_data = parsed_scenes
                 st.rerun()
 
-    st.info("Visual Script နှင့် Prompt များကို စစ်ဆေးပြင်ဆင်ပါ။")
+    st.info("Scene တစ်ခုချင်းစီကို စစ်ဆေးပါ။ 'Generate Preview' နှိပ်၍ ပုံစမ်းထုတ်ကြည့်ပါ။")
 
     for i, scene in enumerate(st.session_state.scenes_data):
         with st.expander(f"Scene {i+1}", expanded=True):
             c1, c2 = st.columns([1, 2])
             with c1:
-                st.markdown(f"**Action/Visual:**")
-                st.write(f"_{scene['text']}_") # Just text, no audio player
+                st.markdown("**Visual Action:**")
+                st.write(f"_{scene['text']}_")
                 
-                # Test Image Button
+                # Image Preview Button
                 if st.button(f"Generate Preview 🖼️", key=f"btn_img_{i}"):
-                    with st.spinner("Generating..."):
+                    with st.spinner("Generating Image..."):
                         img = generate_preview_image(scene['prompt'])
                         if img:
                             st.session_state.scenes_data[i]['preview_img'] = img
@@ -198,7 +213,7 @@ elif st.session_state.step == 2:
                     st.image(scene['preview_img'], use_container_width=True)
 
             with c2:
-                new_p = st.text_area(f"Visual Prompt", scene['prompt'], key=f"p_{i}", height=100)
+                new_p = st.text_area(f"Visual Prompt (English)", scene['prompt'], key=f"p_{i}", height=120)
                 st.session_state.scenes_data[i]['prompt'] = new_p
 
     c1, c2 = st.columns(2)
@@ -213,11 +228,11 @@ elif st.session_state.step == 2:
             st.rerun()
 
 # ----------------------------------------------------------------
-# STEP 3: Final 3-Prompt Generation
+# STEP 3: Final Output
 # ----------------------------------------------------------------
 elif st.session_state.step == 3:
     if not st.session_state.final_data:
-        with st.spinner("Final Prompts (Image, Video, Music) များ ခွဲထုတ်နေပါသည်..."):
+        with st.spinner("Creating Prompts for Image, Video & Music..."):
             final_results = []
             for scene in st.session_state.scenes_data:
                 res = generate_final_3_prompts(scene['prompt'], selected_model)
@@ -231,6 +246,8 @@ elif st.session_state.step == 3:
             st.session_state.final_data = final_results
             st.rerun()
 
+    st.success("🎉 Final Prompts for your Video Creation")
+
     for i, item in enumerate(st.session_state.final_data):
         st.divider()
         st.subheader(f"Scene {i+1}")
@@ -243,12 +260,10 @@ elif st.session_state.step == 3:
                  st.image(item['preview_img'], width=200)
 
         with c_right:
-            st.text_area("Image Prompt (Midjourney/DALL-E)", item['p_img'], key=f"img_{i}")
-            st.text_area("Video Prompt (Luma/Runway)", item['p_vid'], key=f"vid_{i}")
-            st.text_area("Music Prompt (Suno)", item['p_mus'], key=f"mus_{i}")
+            st.text_area("🖼️ Image Prompt", item['p_img'], key=f"img_{i}")
+            st.text_area("🎥 Video Prompt", item['p_vid'], key=f"vid_{i}")
+            st.text_area("🎵 Music Prompt", item['p_mus'], key=f"mus_{i}")
 
     if st.button("Start Over"):
         st.session_state.clear()
         st.rerun()
-
-
