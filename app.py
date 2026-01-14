@@ -41,22 +41,29 @@ def generate_visual_script(topic, model_name):
     """Step 1: Silent Movie Script (Anthropomorphic Style)"""
     try:
         model = genai.GenerativeModel(model_name)
-        # ▼▼▼ PROMPT ပြင်ထားသည် ▼▼▼
+        
+        # ▼▼▼ အောက်ပါ Prompt စာသားအုပ်စုကို အစားထိုး ပြင်ရေးလိုက်ပါ ▼▼▼
         prompt = f"""
-        You are a Video Scriptwriter for a viral 'Silent Cat Meme Movie' (like the famous internet cat stories).
+        You are a Video Scriptwriter for a viral 'Silent Cat Meme Movie'.
         Topic: '{topic}'
         
-        IMPORTANT CHARACTER STYLE: 
-        The main character is an anthropomorphic cat. It stands upright like a human, wears clothes (like a tiny backpack, hoodie, etc.), has human-like hands/feet, and performs human actions (cooking, crying like a human, walking on two legs). It is NOT a regular four-legged animal.
-
-        Rules:
-        1. NO Dialogue. NO Narration.
-        2. Focus ONLY on Visual Actions reflective of this human-like cat style.
-        3. Language: Write the visual description in Burmese.
-        4. Length: Create enough content for a 3-minute video.
+        KEY CHARACTER SETTING: 
+        The main character is an ANTHROPOMORPHIC CAT. 
+        - It stands upright on two legs like a human.
+        - It wears human clothes (hoodies, tiny backpacks, shirts).
+        - It uses its front paws like human hands.
+        - It lives in a human-like world and does human activities (cooking, working, traveling).
+        
+        Rules for the Script:
+        1. NO Dialogue. NO Narration/Voiceover.
+        2. Focus ONLY on Visual Actions (Body language, facial expressions, interactions).
+        3. Language: Write the visual action descriptions in Burmese.
+        4. Length: Create enough scenes for a 3-minute video.
+        
         Output: Just write the visual story flow in Burmese paragraphs.
         """
-        # ▲▲▲ PROMPT ပြင်ထားသည် ▲▲▲
+        # ▲▲▲ ဒီအထိ ပြင်ပါ ▲▲▲
+        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -222,3 +229,4 @@ elif st.session_state.step == 3:
     if st.button("Start Over"):
         st.session_state.clear()
         st.rerun()
+
