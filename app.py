@@ -1,6 +1,5 @@
 import streamlit as st
 import google.generativeai as genai
-from gtts import gTTS
 import io
 
 # 1. Page Configuration
@@ -113,14 +112,7 @@ def generate_final_3_prompts(image_prompt, model_name):
     except Exception as e:
         return f"Error: {e}"
 
-def text_to_speech_mm(text):
-    try:
-        tts = gTTS(text=text, lang='my') 
-        audio_fp = io.BytesIO()
-        tts.write_to_fp(audio_fp)
-        return audio_fp
-    except:
-        return None
+
 
 # --- Main Workflow ---
 
@@ -160,12 +152,13 @@ if st.session_state.step == 1:
             st.rerun()
 
 # ----------------------------------------------------------------
-# STEP 2: Generate Audio & Draft Prompts (Visual Preview Added)
+# STEP 2: Generate Draft Prompts (No Audio)
 # ----------------------------------------------------------------
 elif st.session_state.step == 2:
     if not st.session_state.scenes_data:
-        with st.spinner("အသံဖိုင်များနှင့် ပုံ Prompt များ ဖန်တီးနေပါသည်..."):
-            raw_data = generate_initial_prompts(st.session_state.burmese_story, selected_model)
+        # Generate Raw Data
+        with st.spinner(f"ဗီဒီယို Script ကို Scene {num_scenes_input} ခုခွဲ၍ Prompt များထုတ်နေပါသည်..."):
+            raw_data = generate_initial_prompts(st.session_state.burmese_story, selected_model, num_scenes_input)
             if raw_data:
                 scenes = raw_data.split('###')
                 parsed_scenes = []
@@ -179,38 +172,38 @@ elif st.session_state.step == 2:
                             if "English_Prompt:" in line: eng_prompt = line.replace("English_Prompt:", "").strip()
                         
                         if burmese_text:
-                            audio = text_to_speech_mm(burmese_text)
-                            parsed_scenes.append({"text": burmese_text, "audio": audio, "prompt": eng_prompt, "preview_img": None})
+                            # Audio generation removed
+                            parsed_scenes.append({"text": burmese_text, "prompt": eng_prompt, "preview_img": None})
                 st.session_state.scenes_data = parsed_scenes
                 st.rerun()
 
-    st.info("Visual Prompt များကို စိတ်ကြိုက်ပြင်ပါ။ လိုအပ်လျှင် 'Test Image' နှိပ်၍ ပုံစမ်းထုတ်ကြည့်နိုင်သည်။")
+    st.info("Visual Script နှင့် Prompt များကို စစ်ဆေးပြင်ဆင်ပါ။")
 
     for i, scene in enumerate(st.session_state.scenes_data):
         with st.expander(f"Scene {i+1}", expanded=True):
             c1, c2 = st.columns([1, 2])
             with c1:
-                st.write(f"**{scene['text']}**")
-                if scene['audio']: st.audio(scene['audio'], format='audio/mp3')
+                st.markdown(f"**Action/Visual:**")
+                st.write(f"_{scene['text']}_") # Just text, no audio player
                 
-                # Preview Image Section
-                if st.button(f"🖼️ Test Image (Scene {i+1})", key=f"btn_img_{i}"):
-                    with st.spinner("Generating preview with Gemini 3 Pro Image..."):
+                # Test Image Button
+                if st.button(f"Generate Preview 🖼️", key=f"btn_img_{i}"):
+                    with st.spinner("Generating..."):
                         img = generate_preview_image(scene['prompt'])
                         if img:
                             st.session_state.scenes_data[i]['preview_img'] = img
                             st.rerun()
                 
                 if scene['preview_img']:
-                    st.image(scene['preview_img'], caption="Gemini 3 Preview", use_container_width=True)
+                    st.image(scene['preview_img'], use_container_width=True)
 
             with c2:
-                new_p = st.text_area(f"Prompt (English)", scene['prompt'], key=f"p_{i}", height=150)
+                new_p = st.text_area(f"Visual Prompt", scene['prompt'], key=f"p_{i}", height=100)
                 st.session_state.scenes_data[i]['prompt'] = new_p
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("< Back"):
+        if st.button("< Back to Script"):
             st.session_state.step = 1
             st.session_state.scenes_data = [] 
             st.rerun()
@@ -224,7 +217,7 @@ elif st.session_state.step == 2:
 # ----------------------------------------------------------------
 elif st.session_state.step == 3:
     if not st.session_state.final_data:
-        with st.spinner(f"{selected_model} ဖြင့် Final Prompts များ ခွဲထုတ်နေပါသည်..."):
+        with st.spinner("Final Prompts (Image, Video, Music) များ ခွဲထုတ်နေပါသည်..."):
             final_results = []
             for scene in st.session_state.scenes_data:
                 res = generate_final_3_prompts(scene['prompt'], selected_model)
@@ -244,14 +237,15 @@ elif st.session_state.step == 3:
         
         c_left, c_right = st.columns([1,2])
         with c_left:
+             st.markdown("**Visual Action:**")
              st.info(item['text'])
              if item.get('preview_img'):
-                 st.image(item['preview_img'], caption="Ref Image", width=200)
+                 st.image(item['preview_img'], width=200)
 
         with c_right:
-            st.text_area("Image Prompt", item['p_img'], key=f"img_{i}")
-            st.text_area("Video Prompt", item['p_vid'], key=f"vid_{i}")
-            st.text_area("Music Prompt", item['p_mus'], key=f"mus_{i}")
+            st.text_area("Image Prompt (Midjourney/DALL-E)", item['p_img'], key=f"img_{i}")
+            st.text_area("Video Prompt (Luma/Runway)", item['p_vid'], key=f"vid_{i}")
+            st.text_area("Music Prompt (Suno)", item['p_mus'], key=f"mus_{i}")
 
     if st.button("Start Over"):
         st.session_state.clear()
