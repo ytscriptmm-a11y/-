@@ -42,7 +42,7 @@ def generate_visual_script(topic, model_name):
     try:
         model = genai.GenerativeModel(model_name)
         
-        # ▼▼▼ အောက်ပါ Prompt စာသားအုပ်စုကို အစားထိုး ပြင်ရေးလိုက်ပါ ▼▼▼
+        # ▼▼▼ Prompt ကို ဒီလို ပြင်လိုက်ပါ ▼▼▼
         prompt = f"""
         You are a Video Scriptwriter for a viral 'Silent Cat Meme Movie'.
         Topic: '{topic}'
@@ -95,22 +95,31 @@ def generate_scene_breakdown(script_text, model_name, scene_count):
         return None
 
 def generate_preview_image(prompt):
-    """Image Preview"""
-    # ▼▼▼ STYLE ပြင်ထားသည် ▼▼▼
-    # ပုံစံကို အတင်း forcing လုပ်မယ့် keywords တွေ ထပ်ဖြည့်ထားပါတယ်
-    style_suffix = ", 3D animated character, anthropomorphic cute cat wearing clothes, standing upright, human-like poses, Pixar style render, expressive face"
-    # ▲▲▲ STYLE ပြင်ထားသည် ▲▲▲
+    """Image Preview (Forcing Gemini 3 Pro Image Preview)"""
+    
+    # လူလိုကြောင်ဖြစ်အောင် Style Keywords တွေ ပေါင်းထည့်ခြင်း
+    style_suffix = ", 3D animated character, anthropomorphic cute cat wearing clothes, standing upright, human-like poses, Pixar style render, expressive face, masterpiece"
+    
     try:
-        model = genai.GenerativeModel("imagen-3.0-generate-001")
-        result = model.generate_images(prompt=prompt + style_suffix, number_of_images=1)
+        # Priority 1: User Requested Model
+        model = genai.GenerativeModel("models/gemini-3-pro-image-preview")
+        result = model.generate_images(
+            prompt=prompt + style_suffix, 
+            number_of_images=1
+        )
         return result.images[0]
-    except:
+    except Exception as e1:
+        # Priority 2: Fallback to Standard Imagen 3 (if Gemini 3 is busy/unavailable)
         try:
-             model = genai.GenerativeModel("models/gemini-3-pro-image-preview")
-             result = model.generate_images(prompt=prompt + style_suffix, number_of_images=1)
+             print(f"Gemini 3 Preview failed ({e1}), trying Imagen 3...")
+             model = genai.GenerativeModel("imagen-3.0-generate-001")
+             result = model.generate_images(
+                 prompt=prompt + style_suffix, 
+                 number_of_images=1
+             )
              return result.images[0]
-        except Exception as e:
-            st.warning(f"Image Gen Error (Check API Access): {e}")
+        except Exception as e2:
+            st.warning(f"Image Gen Error: {e2}")
             return None
 
 def generate_final_prompts(image_prompt, model_name):
@@ -229,4 +238,5 @@ elif st.session_state.step == 3:
     if st.button("Start Over"):
         st.session_state.clear()
         st.rerun()
+
 
