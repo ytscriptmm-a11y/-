@@ -122,16 +122,22 @@ def generate_preview_image(prompt):
             st.warning(f"Image Gen Error: {e2}")
             return None
 
-def generate_final_prompts(image_prompt, model_name):
-    """Step 3: Final Prompts"""
+def generate_grok_prompts(image_prompt, model_name):
+    """Step 3: Generate Prompts for Grok (Video + Audio)"""
     try:
         model = genai.GenerativeModel(model_name)
         prompt = f"""
-        Based on: "{image_prompt}"
-        Generate 3 prompts ensuring the anthropomorphic cat style is maintained:
-        IMAGE: Optimized for DALL-E 3 (Detailed character design)
-        VIDEO: Optimized for Luma (Camera movement focusing on character action)
-        MUSIC: Optimized for Suno (Mood fitting the scene)
+        Based on this image description: "{image_prompt}"
+        
+        I have generated an image. Now I need to turn it into a video using Grok AI.
+        Generate 2 specific prompts:
+        
+        1. VIDEO_PROMPT: Describe the motion/action for the video generation. (e.g., "The cat walks forward sadly, rain falling, camera zooms in, cinematic lighting").
+        2. AUDIO_PROMPT: Describe the sound/music. (e.g., "Sound of heavy rain, thunder, and sad violin music").
+        
+        Output Format:
+        VIDEO_PROMPT: [Text]
+        AUDIO_PROMPT: [Text]
         """
         response = model.generate_content(prompt)
         return response.text
@@ -208,35 +214,48 @@ elif st.session_state.step == 2:
         st.session_state.step = 3
         st.rerun()
 
-# STEP 3
+# ----------------------------------------------------------------
+# STEP 3: FINAL GROK ASSETS
+# ----------------------------------------------------------------
 elif st.session_state.step == 3:
     if not st.session_state.final_data:
-        with st.spinner("Finalizing prompts..."):
+        with st.spinner("Writing Video & Audio prompts for Grok..."):
             finals = []
             for sc in st.session_state.scenes_data:
-                res = generate_final_prompts(sc['prompt'], selected_model)
-                p_img, p_vid, p_mus = "", "", ""
+                # Function အသစ်ကို လှမ်းခေါ်ပါမယ်
+                res = generate_grok_prompts(sc['prompt'], selected_model)
+                
+                p_vid, p_aud = "", ""
                 if res:
                     for l in res.split('\n'):
-                        if "IMAGE:" in l: p_img = l.replace("IMAGE:", "").strip()
-                        if "VIDEO:" in l: p_vid = l.replace("VIDEO:", "").strip()
-                        if "MUSIC:" in l: p_mus = l.replace("MUSIC:", "").strip()
-                finals.append({**sc, "p_img": p_img, "p_vid": p_vid, "p_mus": p_mus})
+                        if "VIDEO_PROMPT:" in l: p_vid = l.replace("VIDEO_PROMPT:", "").strip()
+                        if "AUDIO_PROMPT:" in l: p_aud = l.replace("AUDIO_PROMPT:", "").strip()
+                
+                finals.append({**sc, "p_vid": p_vid, "p_aud": p_aud})
             st.session_state.final_data = finals
             st.rerun()
+
+    st.success("Download the image and Copy the prompts for Grok AI.")
 
     for i, item in enumerate(st.session_state.final_data):
         st.divider()
         st.subheader(f"Scene {i+1}")
         c1, c2 = st.columns([1,2])
-        c1.markdown(f"**Action:** _{item['text']}_")
-        if item['img']: c1.image(item['img'], width=200)
-        c2.text_area("Image Prompt (DALL-E/MJ)", item['p_img'], key=f"fi{i}")
-        c2.text_area("Video Prompt (Luma/Runway)", item['p_vid'], key=f"fv{i}")
-        c2.text_area("Music Prompt (Suno)", item['p_mus'], key=f"fm{i}")
+        
+        with c1:
+            if item.get('img'): 
+                st.image(item['img'], caption="Save this image for Grok")
+            else:
+                st.warning("No image generated in Step 2.")
+        
+        with c2:
+            st.info("Input for Grok AI:")
+            st.text_area("🎥 Video Motion Prompt", item['p_vid'], key=f"fv{i}")
+            st.text_area("🔊 Audio/Sound Prompt", item['p_aud'], key=f"fa{i}")
 
     if st.button("Start Over"):
         st.session_state.clear()
         st.rerun()
+
 
 
