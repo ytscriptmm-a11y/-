@@ -47,14 +47,18 @@ def generate_burmese_story(topic, model_name):
     try:
         model = genai.GenerativeModel(model_name)
         prompt = f"""
-    You are a professional scriptwriter for viral TikTok/YouTube videos.
-    Write a detailed, emotional, and engaging 'Cat Story' in Burmese based on: '{topic}'.
-    
-    Requirements:
-    1. Length: The story MUST be long enough for a 3-minute video (approximately 400-500 words).
-    2. Structure: It needs a strong introduction, a middle part with struggle/conflict/journey, and a heartwarming conclusion.
-    3. Format: Write ONLY the narration text in Burmese. Do not include scene numbers yet.
-    """
+        You are a Video Scriptwriter for a viral 'Silent Cat Movie'.
+        Topic: '{topic}'
+
+        Rules for the Script:
+        1. NO Dialogue. NO Narration/Voiceover.
+        2. Focus ONLY on Visual Actions: Describe the cat's body language, expressions, and interactions with the environment to tell the story.
+        3. Language: Write the visual description in Burmese (So I can read and understand the flow).
+        4. Length: Create enough visual scenes for a 3-minute video.
+        5. Style: 'Show, Don't Tell'. (Instead of saying 'The cat was sad', write 'The cat lowered its ears and curled into a tight ball in the corner').
+
+        Output: Just write the visual story flow in Burmese paragraphs.
+        """
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -252,4 +256,5 @@ elif st.session_state.step == 3:
     if st.button("Start Over"):
         st.session_state.clear()
         st.rerun()
+
 
