@@ -1,6 +1,5 @@
 import streamlit as st
 import google.generativeai as genai
-import io
 import time
 
 # 1. Page Configuration
@@ -13,7 +12,7 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     api_key = st.sidebar.text_input("Gemini API Key", type="password")
 
-# --- SIDEBAR SETTINGS ---
+# --- SIDEBAR SETTINGS (ဒီအပိုင်း အရေးကြီးပါတယ်) ---
 st.sidebar.header("⚙️ Settings")
 
 # User's Custom Model List
@@ -32,7 +31,7 @@ num_scenes_input = st.sidebar.slider("Scene အရေအတွက် (ပုံ�
 
 st.sidebar.info("Note: No Audio (TTS) - Visual Script Only")
 
-# 3. Session State
+# 3. Session State Initialization
 if 'step' not in st.session_state: st.session_state.step = 1
 if 'burmese_story' not in st.session_state: st.session_state.burmese_story = ""
 if 'scenes_data' not in st.session_state: st.session_state.scenes_data = [] 
@@ -101,13 +100,13 @@ def generate_preview_image(prompt):
         )
         return result.images[0]
     except Exception as e:
-        # Fallback if specific model name fails or API issue
+        # Fallback if specific model name fails
         try:
              model = genai.GenerativeModel("models/gemini-3-pro-image-preview")
              result = model.generate_images(prompt=prompt, number_of_images=1)
              return result.images[0]
-        except:
-            st.warning(f"Image Error: {e}")
+        except Exception as e2:
+            st.warning(f"Image Error: {e2}")
             return None
 
 def generate_final_3_prompts(image_prompt, model_name):
@@ -171,7 +170,7 @@ if st.session_state.step == 1:
 # ----------------------------------------------------------------
 elif st.session_state.step == 2:
     if not st.session_state.scenes_data:
-        # HERE IS WHERE THE ERROR WAS: num_scenes_input is now defined in sidebar
+        # Fixed: Using variable from sidebar
         with st.spinner(f"Breaking down into {num_scenes_input} scenes..."):
             raw_data = generate_scene_breakdown(st.session_state.burmese_story, selected_model, num_scenes_input)
             if raw_data:
@@ -187,7 +186,7 @@ elif st.session_state.step == 2:
                             if "English_Prompt:" in line: eng_prompt = line.replace("English_Prompt:", "").strip()
                         
                         if burmese_text:
-                            # No Audio, just text and prompt
+                            # No Audio
                             parsed_scenes.append({"text": burmese_text, "prompt": eng_prompt, "preview_img": None})
                 st.session_state.scenes_data = parsed_scenes
                 st.rerun()
