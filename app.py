@@ -5,7 +5,6 @@ import base64
 import io
 import time
 import json
-import re
 from PIL import Image
 
 # ═══════════════════════════════════════════════════════════════════
@@ -18,62 +17,48 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Modern Dark Theme CSS with Mobile Responsiveness
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Myanmar:wght@400;500;600&display=swap');
     
-    /* ═══ GLOBAL STYLES ═══ */
     .stApp {
         background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
         font-family: 'Outfit', 'Noto Sans Myanmar', sans-serif;
     }
     
     #MainMenu, footer, header {visibility: hidden;}
-    .block-container {
-        padding: 1rem 1rem 3rem 1rem;
-        max-width: 1200px;
-    }
+    .block-container { padding: 1rem 1rem 3rem 1rem; max-width: 1400px; }
     
-    /* ═══ HEADER STYLES ═══ */
     .main-header {
         background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-size: clamp(1.8rem, 5vw, 3rem);
+        font-size: clamp(1.6rem, 4vw, 2.5rem);
         font-weight: 700;
         text-align: center;
-        margin-bottom: 0.3rem;
-        letter-spacing: -0.02em;
+        margin-bottom: 0.2rem;
     }
     
     .sub-header {
         color: #a0aec0;
         text-align: center;
-        font-size: clamp(0.85rem, 2.5vw, 1rem);
-        margin-bottom: 1.5rem;
-        font-weight: 400;
+        font-size: clamp(0.8rem, 2vw, 0.95rem);
+        margin-bottom: 1.2rem;
     }
     
-    /* ═══ STEP INDICATOR ═══ */
     .step-container {
         display: flex;
         justify-content: center;
-        gap: 0.4rem;
-        margin: 1.5rem 0;
+        gap: 0.3rem;
+        margin: 1rem 0;
         flex-wrap: wrap;
     }
     
     .step-item {
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-        padding: 0.4rem 0.8rem;
+        padding: 0.4rem 0.7rem;
         border-radius: 50px;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 500;
-        transition: all 0.3s ease;
     }
     
     .step-active {
@@ -94,88 +79,60 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    /* ═══ CARD STYLES ═══ */
     .glass-card {
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        transition: all 0.3s ease;
-    }
-    
-    .glass-card:hover {
-        border-color: rgba(102, 126, 234, 0.3);
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        border-radius: 16px;
+        padding: 1.2rem;
+        margin: 0.8rem 0;
     }
     
     .character-card {
-        background: linear-gradient(145deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05));
-        border: 2px dashed rgba(102, 126, 234, 0.3);
-        border-radius: 16px;
-        padding: 1.2rem;
-        margin: 0.8rem 0;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-    
-    .character-card:hover {
-        border-color: rgba(102, 126, 234, 0.6);
-        background: linear-gradient(145deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1));
-    }
-    
-    .character-card.uploaded {
-        border-style: solid;
-        border-color: rgba(72, 187, 120, 0.5);
-        background: linear-gradient(145deg, rgba(72, 187, 120, 0.1), rgba(72, 187, 120, 0.05));
-    }
-    
-    .character-name {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #e2e8f0;
-        margin-bottom: 0.5rem;
-    }
-    
-    .character-desc {
-        font-size: 0.8rem;
-        color: #a0aec0;
-        margin-bottom: 1rem;
+        background: linear-gradient(145deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
     }
     
     .scene-card {
-        background: linear-gradient(145deg, rgba(26, 26, 46, 0.8), rgba(22, 33, 62, 0.6));
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(26, 26, 46, 0.9), rgba(22, 33, 62, 0.7));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
         padding: 1.2rem;
         margin: 0.8rem 0;
     }
     
-    .scene-number {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-bottom: 0.8rem;
+    .ref-upload-box {
+        background: rgba(102, 126, 234, 0.05);
+        border: 2px dashed rgba(102, 126, 234, 0.3);
+        border-radius: 10px;
+        padding: 0.8rem;
+        margin: 0.3rem 0;
+        text-align: center;
     }
     
-    /* ═══ BUTTON STYLES ═══ */
+    .ref-upload-box.has-image {
+        border-style: solid;
+        border-color: rgba(72, 187, 120, 0.5);
+        background: rgba(72, 187, 120, 0.05);
+    }
+    
+    .char-label {
+        font-size: 0.75rem;
+        color: #a0aec0;
+        margin-bottom: 0.3rem;
+    }
+    
     .stButton > button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        border-radius: 12px;
-        padding: 0.7rem 1.5rem;
+        border-radius: 10px;
+        padding: 0.6rem 1.2rem;
         font-weight: 600;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
+        font-size: 0.9rem;
         width: 100%;
     }
     
@@ -184,144 +141,69 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
     
-    /* ═══ INPUT STYLES ═══ */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
-    .stSelectbox > div > div > div {
+    .stSelectbox > div > div {
         background: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 12px !important;
+        border-radius: 10px !important;
         color: #e2e8f0 !important;
-        font-family: 'Outfit', 'Noto Sans Myanmar', sans-serif !important;
     }
     
-    .stTextInput > div > div > input:focus,
-    .stTextArea > div > div > textarea:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
-    }
-    
-    /* ═══ FILE UPLOADER ═══ */
-    .stFileUploader > div {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 2px dashed rgba(102, 126, 234, 0.3) !important;
-        border-radius: 12px !important;
-    }
-    
-    .stFileUploader > div:hover {
-        border-color: rgba(102, 126, 234, 0.6) !important;
-    }
-    
-    /* ═══ ALERT STYLES ═══ */
     .success-alert {
         background: linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(72, 187, 120, 0.05));
         border: 1px solid rgba(72, 187, 120, 0.3);
-        border-radius: 12px;
-        padding: 1rem;
+        border-radius: 10px;
+        padding: 0.8rem;
         color: #68d391;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
     }
     
     .info-alert {
         background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05));
         border: 1px solid rgba(102, 126, 234, 0.3);
-        border-radius: 12px;
-        padding: 1rem;
+        border-radius: 10px;
+        padding: 0.8rem;
         color: #a0aec0;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
     }
     
     .warning-alert {
         background: linear-gradient(135deg, rgba(236, 201, 75, 0.1), rgba(236, 201, 75, 0.05));
         border: 1px solid rgba(236, 201, 75, 0.3);
-        border-radius: 12px;
-        padding: 1rem;
+        border-radius: 10px;
+        padding: 0.8rem;
         color: #ecc94b;
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
+    }
+    
+    .image-container {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         margin: 1rem 0;
     }
     
-    /* ═══ IMAGE CONTAINER ═══ */
-    .image-container {
-        border-radius: 12px;
-        overflow: hidden;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .image-container:hover {
-        border-color: rgba(102, 126, 234, 0.5);
-    }
-    
-    .character-preview {
-        width: 120px;
-        height: 120px;
-        border-radius: 12px;
+    .char-thumb {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
         object-fit: cover;
-        border: 2px solid rgba(72, 187, 120, 0.5);
-        margin: 0.5rem auto;
-        display: block;
+        border: 2px solid rgba(102, 126, 234, 0.3);
     }
     
-    /* ═══ MOBILE RESPONSIVE ═══ */
     @media (max-width: 768px) {
-        .block-container {
-            padding: 0.8rem 0.8rem 2rem 0.8rem;
-        }
-        
-        .glass-card {
-            padding: 1rem;
-            border-radius: 16px;
-        }
-        
-        .step-item {
-            padding: 0.3rem 0.6rem;
-            font-size: 0.7rem;
-        }
-        
-        .character-card {
-            padding: 1rem;
-        }
-    }
-    
-    /* ═══ ANIMATION ═══ */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .animate-in {
-        animation: fadeIn 0.5s ease-out;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    
-    .pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    /* ═══ CUSTOM DIVIDER ═══ */
-    .custom-divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-        margin: 1.5rem 0;
-    }
-    
-    /* ═══ SCROLLBAR ═══ */
-    ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.02);
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: rgba(102, 126, 234, 0.3);
-        border-radius: 3px;
+        .block-container { padding: 0.5rem; }
+        .glass-card { padding: 0.8rem; }
+        .scene-card { padding: 0.8rem; }
     }
     
     .viewerBadge_container__r5tak {display: none;}
@@ -329,797 +211,642 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════════
-# 🔧 SESSION STATE INITIALIZATION
+# 🔧 SESSION STATE
 # ═══════════════════════════════════════════════════════════════════
-if 'step' not in st.session_state:
-    st.session_state.step = 1
-if 'burmese_story' not in st.session_state:
-    st.session_state.burmese_story = ""
-if 'characters' not in st.session_state:
-    st.session_state.characters = []  # List of {name, description, image_data}
-if 'scenes_data' not in st.session_state:
-    st.session_state.scenes_data = []
-if 'final_data' not in st.session_state:
-    st.session_state.final_data = []
-if 'api_configured' not in st.session_state:
-    st.session_state.api_configured = False
+defaults = {
+    'step': 1,
+    'script': "",
+    'characters': {},  # {name: {prompt, image_data, description}}
+    'scenes': [],  # [{text, characters: [name], prompt, ref_images: {char_name: image_data}, generated_image, grok_video, grok_audio}]
+    'image_library': {},  # {name: image_data} - ယခင်သုံးခဲ့တဲ့ပုံများ
+}
+
+for key, val in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # ═══════════════════════════════════════════════════════════════════
-# 🔑 API CONFIGURATION
+# 🔑 API CONFIG
 # ═══════════════════════════════════════════════════════════════════
-def configure_api():
-    """Configure Gemini API with key from secrets or user input"""
+def get_client():
     if "GEMINI_API_KEY" in st.secrets:
-        api_key = st.secrets["GEMINI_API_KEY"]
-    else:
-        api_key = None
-    
-    if api_key:
-        try:
-            client = genai.Client(api_key=api_key)
-            st.session_state.api_configured = True
-            return client
-        except Exception as e:
-            st.error(f"API Configuration Error: {e}")
-            return None
+        return genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
     return None
 
 # ═══════════════════════════════════════════════════════════════════
-# 🎬 CORE FUNCTIONS
+# 🛠️ UTILITY FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════
+def img_to_b64(data):
+    if not data:
+        return None
+    if isinstance(data, bytes):
+        return base64.b64encode(data).decode('utf-8')
+    buf = io.BytesIO()
+    data.save(buf, format='PNG')
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-def generate_visual_script(client, topic: str, model_name: str) -> str:
-    """Step 1: Generate Silent Movie Script"""
-    try:
-        prompt = f"""
-You are a Video Scriptwriter for a viral 'Silent Cat Meme Movie'.
+def pil_from_bytes(data):
+    if isinstance(data, bytes):
+        return Image.open(io.BytesIO(data))
+    return data
+
+# ═══════════════════════════════════════════════════════════════════
+# 🤖 AI FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════
+def generate_script(client, topic, model):
+    prompt = f"""
+You are a scriptwriter for a viral 'Silent Cat Meme Movie'.
 Topic: '{topic}'
 
-KEY CHARACTER SETTING: 
-The characters are ANTHROPOMORPHIC CATS. 
-- They stand upright on two legs like humans.
-- They wear human clothes (hoodies, backpacks, shirts, pants).
-- They use their front paws like human hands.
-- They live in a human-like world and do human activities.
-- Expressions are exaggerated and cute, like internet meme cats.
+Characters are ANTHROPOMORPHIC CATS (stand upright, wear clothes, use paws like hands).
 
-Rules for the Script:
-1. NO Dialogue. NO Narration/Voiceover. This is a SILENT movie.
-2. Focus ONLY on Visual Actions (body language, facial expressions, interactions).
-3. Language: Write ALL descriptions in Burmese (Myanmar language).
-4. Length: Create enough scenes for a 1-3 minute video.
-5. Characters: Give each character a clear NAME and distinct personality/appearance.
+Rules:
+1. NO dialogue/narration - SILENT movie
+2. Focus on visual actions, expressions, body language
+3. Write in Burmese (Myanmar)
+4. Length: 1-3 minutes video
+5. Give characters clear NAMES
 
-IMPORTANT: Be clear about which characters appear in each scene.
-
-Output Format: 
-Write the visual story in Burmese paragraphs. Include character names when they appear.
+Output: Burmese paragraphs with character names.
 """
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[prompt]
-        )
-        return response.text
+    try:
+        resp = client.models.generate_content(model=model, contents=[prompt])
+        return resp.text
     except Exception as e:
-        st.error(f"Script Generation Error: {e}")
+        st.error(f"Error: {e}")
         return None
 
+def extract_characters_ai(client, script, model):
+    prompt = f"""
+Analyze this script and list ALL character names:
+"{script}"
 
-def extract_characters(client, script_text: str, model_name: str) -> list:
-    """Step 2: Extract characters from the script"""
-    try:
-        prompt = f"""
-Analyze this Burmese script and extract ALL characters that appear in the story.
+Output JSON array only:
+["Character1", "Character2"]
 
-Script:
-"{script_text}"
-
-For each character, provide:
-1. name: The character's name (in Burmese or English as used in the script)
-2. description: A brief description of the character's appearance and role (in Burmese)
-3. appearance_traits: Key visual traits for image generation (in English)
-
-Output ONLY valid JSON array format like this:
-[
-  {{
-    "name": "ကြောင်ပျင်းလေး",
-    "description": "ဆင်းရဲသော ကြောင်လေး၊ ဝမ်းနည်းနေတယ်",
-    "appearance_traits": "sad looking cat, wearing worn clothes, droopy ears"
-  }},
-  {{
-    "name": "သူငယ်ချင်းကြောင်",
-    "description": "ပျော်ရွှင်သော ကြောင်လေး၊ အကူအညီပေးတယ်",
-    "appearance_traits": "happy cheerful cat, colorful clothes, bright eyes"
-  }}
-]
-
-If there is only ONE main character, still return it as an array with one item.
-Return ONLY the JSON array, no other text.
+Return ONLY the JSON array.
 """
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[prompt]
-        )
-        
-        # Parse JSON from response
-        response_text = response.text.strip()
-        
-        # Clean up response - remove markdown code blocks if present
-        if "```json" in response_text:
-            response_text = response_text.split("```json")[1].split("```")[0]
-        elif "```" in response_text:
-            response_text = response_text.split("```")[1].split("```")[0]
-        
-        response_text = response_text.strip()
-        
-        try:
-            characters = json.loads(response_text)
-            # Add image_data field to each character
-            for char in characters:
-                char['image_data'] = None
-            return characters
-        except json.JSONDecodeError:
-            # Fallback: try to extract with regex
-            st.warning("JSON parsing failed, using fallback method...")
-            return [{
-                "name": "Main Character",
-                "description": "ဇာတ်လမ်းထဲက အဓိကဇာတ်ကောင်",
-                "appearance_traits": "anthropomorphic cat character",
-                "image_data": None
-            }]
-            
-    except Exception as e:
-        st.error(f"Character Extraction Error: {e}")
+    try:
+        resp = client.models.generate_content(model=model, contents=[prompt])
+        text = resp.text.strip()
+        if "```" in text:
+            text = text.split("```")[1].replace("json", "").strip()
+        return json.loads(text)
+    except:
         return []
 
+def generate_character_prompt(client, char_name, description, model):
+    prompt = f"""
+Create an image generation prompt for this character:
+Name: {char_name}
+Description: {description}
 
-def generate_scene_breakdown(client, script_text: str, characters: list, model_name: str, scene_count: int) -> str:
-    """Step 3: Breakdown into scenes with character references"""
-    
-    # Create character reference string
-    char_info = "\n".join([
-        f"- {c['name']}: {c['description']} ({c['appearance_traits']})"
-        for c in characters
-    ])
-    
-    try:
-        prompt = f"""
-Visual Script (in Burmese): 
-"{script_text}"
+Requirements:
+- Anthropomorphic cat (stands upright like human)
+- Wears clothes
+- Cute 3D Pixar style
+- Expressive face
+- Internet meme style
 
-CHARACTERS IN THIS STORY:
-{char_info}
-
-TASK:
-Split this script into exactly {scene_count} distinct scenes for image generation.
-
-For EACH scene, provide:
-1. **Burmese**: A short visual action description in Burmese (1-2 sentences)
-2. **Characters**: List which characters appear in this scene (comma-separated names)
-3. **English_Prompt**: A detailed image generation prompt in English
-
-CRITICAL REQUIREMENTS for English_Prompt:
-- Describe the ACTION and EMOTION, NOT the character's appearance (we have reference images)
-- Include: setting/background, lighting, mood
-- Include: specific pose and action
-- Include: "maintain exact character appearance from reference image"
-- Style: "cute 3D Pixar-style animation, soft lighting, internet meme style"
-- DO NOT describe the character's physical features - just reference them by role
-
-OUTPUT FORMAT (repeat for each scene):
-Burmese: [Burmese action text here]
-Characters: [Character names appearing in this scene]
-English_Prompt: [Action-focused prompt that references the character]
-###
-
-Example:
-Burmese: ကြောင်လေးက မိုးရွာနေတဲ့အထဲ ဝမ်းနည်းစွာ လမ်းလျှောက်နေတယ်။
-Characters: ကြောင်ပျင်းလေး
-English_Prompt: The character from the reference image walking sadly in heavy rain, hunched posture, looking down at puddles, wet fur, rainy city street background with neon lights reflecting on wet pavement, dramatic lighting, emotional atmosphere, maintain exact character appearance from reference image, cute 3D Pixar-style animation, cinematic composition
-###
+Output: Single detailed English prompt only.
 """
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[prompt]
-        )
-        return response.text
-    except Exception as e:
-        st.error(f"Scene Breakdown Error: {e}")
-        return None
-
-
-def generate_image_with_reference(client, prompt: str, reference_images: list, model_name: str = "gemini-2.5-flash-image"):
-    """Generate image using reference images for character consistency"""
-    
     try:
-        # Build content with reference images
+        resp = client.models.generate_content(model=model, contents=[prompt])
+        return resp.text.strip()
+    except Exception as e:
+        return f"Anthropomorphic cat character named {char_name}, {description}, standing upright, wearing clothes, cute 3D Pixar style"
+
+def generate_scene_prompt(client, scene_text, char_names, model):
+    prompt = f"""
+Create an image generation prompt for this scene:
+Scene: {scene_text}
+Characters: {', '.join(char_names)}
+
+Requirements:
+- Focus on ACTION and SETTING (not character appearance - we have reference images)
+- Include pose, emotion, background, lighting
+- Add: "maintain exact character appearance from reference"
+- Style: cute 3D Pixar animation
+
+Output: Single detailed English prompt only.
+"""
+    try:
+        resp = client.models.generate_content(model=model, contents=[prompt])
+        return resp.text.strip()
+    except Exception as e:
+        return f"Scene: {scene_text}, characters in action, cute 3D Pixar style"
+
+def generate_image(client, prompt, ref_images=None, model="gemini-2.5-flash-image"):
+    try:
         contents = []
         
-        # Add reference images first
-        if reference_images:
-            ref_intro = "Here are reference images of the character(s). Generate a new image maintaining their exact appearance:\n\n"
-            contents.append(ref_intro)
-            
-            for i, img_data in enumerate(reference_images):
-                if img_data:
-                    # Convert to PIL Image if needed
-                    if isinstance(img_data, bytes):
-                        img = Image.open(io.BytesIO(img_data))
-                    else:
-                        img = img_data
-                    contents.append(img)
-                    contents.append(f"\n[Reference Image {i+1}]\n")
+        if ref_images:
+            contents.append("Reference image(s) of the character(s). Generate new image keeping their exact appearance:\n")
+            for i, img in enumerate(ref_images):
+                if img:
+                    pil_img = pil_from_bytes(img)
+                    contents.append(pil_img)
+                    contents.append(f"\n[Reference {i+1}]\n")
         
-        # Add the generation prompt
         full_prompt = f"""
-Based on the reference image(s) above, generate a new image:
-
 {prompt}
 
-CRITICAL: The character MUST look exactly like the reference image(s) - same face, same body type, same fur color/pattern. Only change the pose, action, clothing details as needed, and background as specified in the prompt.
-
-Style: cute 3D Pixar-style animation, soft lighting, detailed fur texture, expressive face, internet meme style, masterpiece quality
+Style: cute 3D Pixar animation, soft lighting, detailed, expressive, internet meme style, masterpiece
+{"CRITICAL: Character must look exactly like reference image(s)." if ref_images else ""}
 """
         contents.append(full_prompt)
         
-        response = client.models.generate_content(
-            model=model_name,
+        resp = client.models.generate_content(
+            model=model,
             contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=['IMAGE', 'TEXT']
-            )
+            config=types.GenerateContentConfig(response_modalities=['IMAGE', 'TEXT'])
         )
         
-        # Extract image from response
-        for part in response.candidates[0].content.parts:
-            if hasattr(part, 'inline_data') and part.inline_data is not None:
+        for part in resp.candidates[0].content.parts:
+            if hasattr(part, 'inline_data') and part.inline_data:
                 return part.inline_data.data
-        
         return None
-        
     except Exception as e:
-        st.warning(f"Image generation error: {e}")
-        
-        # Fallback: try without reference (text-only prompt)
-        try:
-            fallback_prompt = f"Generate an image: {prompt}, cute 3D Pixar-style animation, anthropomorphic cat character"
-            response = client.models.generate_content(
-                model="gemini-2.5-flash-image",
-                contents=[fallback_prompt],
-                config=types.GenerateContentConfig(
-                    response_modalities=['IMAGE', 'TEXT']
-                )
-            )
-            
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, 'inline_data') and part.inline_data is not None:
-                    return part.inline_data.data
-            return None
-        except Exception as e2:
-            st.error(f"Fallback also failed: {e2}")
-            return None
+        st.error(f"Image error: {e}")
+        return None
 
+def generate_grok_prompts(client, scene_prompt, model):
+    prompt = f"""
+Scene: "{scene_prompt}"
 
-def generate_grok_prompts(client, scene_prompt: str, model_name: str) -> dict:
-    """Generate Video & Audio Prompts for Grok AI"""
-    try:
-        prompt = f"""
-Based on this scene description: "{scene_prompt}"
+Generate for Grok AI:
+1. VIDEO_PROMPT: Motion, camera movement (3-5 sec)
+2. AUDIO_PROMPT: Music/sound (no dialogue)
 
-Generate prompts for video and audio:
-
-1. VIDEO_PROMPT: Describe motion, camera movement, animation (3-5 seconds)
-2. AUDIO_PROMPT: Describe background music and sound effects (no dialogue)
-
-OUTPUT FORMAT:
-VIDEO_PROMPT: [motion description]
-AUDIO_PROMPT: [sound/music description]
+Format:
+VIDEO_PROMPT: [text]
+AUDIO_PROMPT: [text]
 """
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[prompt]
-        )
-        
+    try:
+        resp = client.models.generate_content(model=model, contents=[prompt])
         result = {"video": "", "audio": ""}
-        for line in response.text.split('\n'):
+        for line in resp.text.split('\n'):
             if "VIDEO_PROMPT:" in line:
                 result["video"] = line.replace("VIDEO_PROMPT:", "").strip()
             if "AUDIO_PROMPT:" in line:
                 result["audio"] = line.replace("AUDIO_PROMPT:", "").strip()
-        
         return result
-    except Exception as e:
-        return {"video": f"Error: {e}", "audio": f"Error: {e}"}
-
-
-def parse_scenes_with_characters(raw_text: str) -> list:
-    """Parse scene breakdown text into structured data with character info"""
-    scenes = []
-    blocks = raw_text.split('###')
-    
-    for block in blocks:
-        if "Burmese:" in block:
-            scene = {
-                "text": "",
-                "characters": [],
-                "prompt": "",
-                "image_data": None
-            }
-            
-            lines = block.strip().split('\n')
-            current_field = None
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith("Burmese:"):
-                    current_field = "text"
-                    scene["text"] = line.replace("Burmese:", "").strip()
-                elif line.startswith("Characters:"):
-                    current_field = "characters"
-                    chars = line.replace("Characters:", "").strip()
-                    scene["characters"] = [c.strip() for c in chars.split(",") if c.strip()]
-                elif line.startswith("English_Prompt:"):
-                    current_field = "prompt"
-                    scene["prompt"] = line.replace("English_Prompt:", "").strip()
-                elif current_field == "prompt" and line:
-                    scene["prompt"] += " " + line
-            
-            if scene["text"] or scene["prompt"]:
-                scenes.append(scene)
-    
-    return scenes
-
-
-def image_to_base64(image_data):
-    """Convert image bytes to base64 string"""
-    if image_data:
-        if isinstance(image_data, bytes):
-            return base64.b64encode(image_data).decode('utf-8')
-        else:
-            # PIL Image
-            buffer = io.BytesIO()
-            image_data.save(buffer, format='PNG')
-            return base64.b64encode(buffer.getvalue()).decode('utf-8')
-    return None
-
-
-def get_character_images_for_scene(scene_characters: list, all_characters: list) -> list:
-    """Get reference images for characters appearing in a scene"""
-    images = []
-    for char_name in scene_characters:
-        for char in all_characters:
-            if char['name'] == char_name and char.get('image_data'):
-                images.append(char['image_data'])
-                break
-    return images
-
+    except:
+        return {"video": "", "audio": ""}
 
 # ═══════════════════════════════════════════════════════════════════
 # 🎨 UI COMPONENTS
 # ═══════════════════════════════════════════════════════════════════
-
 def render_header():
-    """Render the main header"""
     st.markdown('<h1 class="main-header">🐱 Silent Cat Movie Maker</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Character Consistency နဲ့ Silent Movie Script & Image Generator</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Character Consistency + Manual Scene Control</p>', unsafe_allow_html=True)
 
-
-def render_step_indicator(current_step: int):
-    """Render the step progress indicator"""
-    steps = [
-        ("📝", "Script"),
-        ("👤", "Characters"),
-        ("🎬", "Scenes"),
-        ("🖼️", "Images"),
-        ("🎥", "Export")
-    ]
-    
-    step_html = '<div class="step-container">'
+def render_steps(current):
+    steps = [("📝", "Script"), ("👤", "Characters"), ("🎬", "Scenes"), ("🖼️", "Generate"), ("🎥", "Export")]
+    html = '<div class="step-container">'
     for i, (icon, label) in enumerate(steps, 1):
-        if i < current_step:
-            css_class = "step-completed"
-            status = "✓"
-        elif i == current_step:
-            css_class = "step-active"
-            status = icon
-        else:
-            css_class = "step-pending"
-            status = icon
-        
-        step_html += f'<div class="step-item {css_class}">{status} {label}</div>'
-    step_html += '</div>'
-    
-    st.markdown(step_html, unsafe_allow_html=True)
+        cls = "step-completed" if i < current else ("step-active" if i == current else "step-pending")
+        html += f'<div class="step-item {cls}">{"✓" if i < current else icon} {label}</div>'
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
 
-
-def render_settings_sidebar():
-    """Render settings in sidebar"""
+def render_sidebar():
     with st.sidebar:
         st.markdown("### ⚙️ Settings")
-        
-        model_options = [
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-        ]
-        selected_model = st.selectbox(
-            "Text Model:",
-            model_options,
-            index=0
-        )
-        
-        image_model_options = [
-            "gemini-2.5-flash-image",
-            "gemini-2.0-flash-exp",
-        ]
-        selected_image_model = st.selectbox(
-            "Image Model:",
-            image_model_options,
-            index=0
-        )
-        
-        num_scenes = st.slider(
-            "Scene အရေအတွက်:",
-            min_value=4,
-            max_value=15,
-            value=8
-        )
-        
+        model = st.selectbox("Text Model:", ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"], index=0)
+        img_model = st.selectbox("Image Model:", ["gemini-2.5-flash-image"], index=0)
         st.markdown("---")
         st.markdown("""
         <div class="info-alert">
-        <strong>💡 Workflow</strong><br>
-        1. Script ရေးမယ်<br>
-        2. Characters ခွဲထုတ်မယ်<br>
-        3. Character ပုံတွေ Upload<br>
-        4. Scene ပုံတွေထုတ်မယ်<br>
-        5. Grok Prompts Export
+        <b>💡 Tips</b><br>
+        • Character ပုံ - Upload သို့ Generate<br>
+        • Scene - ကိုယ်တိုင်ခွဲနိုင်တယ်<br>
+        • Reference - Scene တိုင်းမှာထည့်
         </div>
         """, unsafe_allow_html=True)
-        
-        return selected_model, selected_image_model, num_scenes
-
+        return model, img_model
 
 # ═══════════════════════════════════════════════════════════════════
-# 🚀 MAIN APPLICATION
+# 🚀 MAIN APP
 # ═══════════════════════════════════════════════════════════════════
-
 def main():
     render_header()
-    selected_model, selected_image_model, num_scenes = render_settings_sidebar()
-    
-    client = configure_api()
+    model, img_model = render_sidebar()
+    client = get_client()
     
     if not client:
-        st.markdown("""
-        <div class="glass-card" style="text-align: center;">
-            <h3>🔑 API Key လိုအပ်ပါတယ်</h3>
-            <p style="color: #a0aec0;">Streamlit Secrets မှာ GEMINI_API_KEY ထည့်ပေးပါ</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="glass-card"><h3>🔑 API Key လိုအပ်ပါတယ်</h3></div>', unsafe_allow_html=True)
         st.stop()
     
-    render_step_indicator(st.session_state.step)
+    render_steps(st.session_state.step)
     
     # ═══════════════════════════════════════════════════════════════
-    # STEP 1: SCRIPT GENERATION
+    # STEP 1: SCRIPT
     # ═══════════════════════════════════════════════════════════════
     if st.session_state.step == 1:
-        st.markdown('<div class="glass-card animate-in">', unsafe_allow_html=True)
-        st.markdown("### 📝 Step 1: Visual Script ရေးမယ်")
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown("### 📝 Step 1: Script ရေးမယ်")
         
-        topic = st.text_input(
-            "Story Topic:",
-            value="ကျောပိုးအိတ်လွယ်ပြီး မိုးထဲ ငိုရင်းလမ်းလျှောက်နေတဲ့ ကြောင်လေး၊ သူငယ်ချင်းကြောင်တကောင်က ထီးလာဖြင့်ပေးတယ်",
-            placeholder="ဇာတ်လမ်း topic ရိုက်ထည့်ပါ..."
-        )
+        topic = st.text_input("Topic:", "မိုးရွာနေတဲ့ညမှာ ဝမ်းနည်းစွာလမ်းလျှောက်နေတဲ့ကြောင်လေး၊ သူငယ်ချင်းကထီးလာဖြင့်ပေးတယ်")
         
-        if st.button("✨ Script ထုတ်မယ်", use_container_width=True):
-            with st.spinner("Script ရေးနေပါတယ်... 🐱"):
-                result = generate_visual_script(client, topic, selected_model)
+        if st.button("✨ Script ထုတ်မယ်"):
+            with st.spinner("ရေးနေပါတယ်..."):
+                result = generate_script(client, topic, model)
                 if result:
-                    st.session_state.burmese_story = result
+                    st.session_state.script = result
                     st.rerun()
         
-        if st.session_state.burmese_story:
-            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-            st.markdown("#### 📄 Generated Script")
-            st.session_state.burmese_story = st.text_area(
-                "Script:",
-                value=st.session_state.burmese_story,
-                height=300,
-                label_visibility="collapsed"
-            )
+        if st.session_state.script:
+            st.markdown("---")
+            st.session_state.script = st.text_area("Script (ပြင်ဆင်နိုင်ပါတယ်):", st.session_state.script, height=250)
             
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🔄 အသစ်ထုတ်မယ်", use_container_width=True):
-                    st.session_state.burmese_story = ""
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("🔄 အသစ်ထုတ်"):
+                    st.session_state.script = ""
                     st.rerun()
-            with col2:
-                if st.button("➡️ Characters ခွဲထုတ်မယ်", use_container_width=True, type="primary"):
+            with c2:
+                if st.button("➡️ Characters", type="primary"):
+                    # Auto-extract character names
+                    chars = extract_characters_ai(client, st.session_state.script, model)
+                    st.session_state.characters = {name: {"prompt": "", "image_data": None, "description": ""} for name in chars}
                     st.session_state.step = 2
                     st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ═══════════════════════════════════════════════════════════════
-    # STEP 2: CHARACTER EXTRACTION & UPLOAD
+    # STEP 2: CHARACTERS (Optional Generate/Upload)
     # ═══════════════════════════════════════════════════════════════
     elif st.session_state.step == 2:
-        st.markdown('<div class="glass-card animate-in">', unsafe_allow_html=True)
-        st.markdown("### 👤 Step 2: Characters ပုံတွေ Upload လုပ်ပါ")
-        
-        # Extract characters if not done
-        if not st.session_state.characters:
-            with st.spinner("Script ထဲက Characters တွေ ခွဲထုတ်နေပါတယ်..."):
-                characters = extract_characters(client, st.session_state.burmese_story, selected_model)
-                if characters:
-                    st.session_state.characters = characters
-                    st.rerun()
-        
-        if st.session_state.characters:
-            st.markdown("""
-            <div class="info-alert">
-                <strong>📌 လိုအပ်ချက်</strong><br>
-                Scene တိုင်းမှာ Character ပုံတူညီဖို့ Reference ပုံတွေ Upload လုပ်ပေးပါ။<br>
-                ပုံတွေက Anthropomorphic Cat (လူလိုရပ်နေတဲ့ကြောင်) ပုံဖြစ်ရပါမယ်။
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown(f"*ဇာတ်လမ်းထဲမှာ Character {len(st.session_state.characters)} ခု တွေ့ပါတယ်*")
-            
-            # Display character upload cards
-            cols = st.columns(min(len(st.session_state.characters), 3))
-            
-            all_uploaded = True
-            
-            for i, char in enumerate(st.session_state.characters):
-                col_idx = i % len(cols)
-                with cols[col_idx]:
-                    uploaded = char.get('image_data') is not None
-                    card_class = "character-card uploaded" if uploaded else "character-card"
-                    
-                    st.markdown(f"""
-                    <div class="{card_class}">
-                        <div class="character-name">🐱 {char['name']}</div>
-                        <div class="character-desc">{char['description']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Show uploaded image or upload button
-                    if uploaded:
-                        b64_img = image_to_base64(char['image_data'])
-                        st.markdown(f"""
-                        <img src="data:image/png;base64,{b64_img}" class="character-preview">
-                        """, unsafe_allow_html=True)
-                        if st.button(f"🔄 ပြောင်းမယ်", key=f"change_{i}"):
-                            st.session_state.characters[i]['image_data'] = None
-                            st.rerun()
-                    else:
-                        all_uploaded = False
-                        uploaded_file = st.file_uploader(
-                            f"ပုံတင်ပါ",
-                            type=['png', 'jpg', 'jpeg', 'webp'],
-                            key=f"upload_{i}",
-                            label_visibility="collapsed"
-                        )
-                        if uploaded_file:
-                            image_data = uploaded_file.read()
-                            st.session_state.characters[i]['image_data'] = image_data
-                            st.rerun()
-            
-            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-            
-            # Upload status
-            uploaded_count = sum(1 for c in st.session_state.characters if c.get('image_data'))
-            total_count = len(st.session_state.characters)
-            
-            if uploaded_count < total_count:
-                st.markdown(f"""
-                <div class="warning-alert">
-                    ⚠️ {uploaded_count}/{total_count} Characters Upload ပြီးပါပြီ။ အားလုံး Upload မှ ရှေ့ဆက်နိုင်ပါမယ်။
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="success-alert">
-                    ✅ Characters အားလုံး Upload ပြီးပါပြီ!
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Navigation
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("⬅️ Script ပြင်မယ်", use_container_width=True):
-                    st.session_state.step = 1
-                    st.session_state.characters = []
-                    st.rerun()
-            with col2:
-                if st.button("➡️ Scene ခွဲမယ်", use_container_width=True, type="primary", disabled=not all_uploaded):
-                    st.session_state.step = 3
-                    st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # ═══════════════════════════════════════════════════════════════
-    # STEP 3: SCENE BREAKDOWN
-    # ═══════════════════════════════════════════════════════════════
-    elif st.session_state.step == 3:
-        st.markdown('<div class="glass-card animate-in">', unsafe_allow_html=True)
-        st.markdown("### 🎬 Step 3: Scene ခွဲခြင်း")
-        
-        if not st.session_state.scenes_data:
-            with st.spinner(f"Scene {num_scenes} ခု ခွဲနေပါတယ်..."):
-                raw_result = generate_scene_breakdown(
-                    client,
-                    st.session_state.burmese_story,
-                    st.session_state.characters,
-                    selected_model,
-                    num_scenes
-                )
-                if raw_result:
-                    scenes = parse_scenes_with_characters(raw_result)
-                    st.session_state.scenes_data = scenes
-                    st.rerun()
-        
-        if st.session_state.scenes_data:
-            st.markdown(f"*Scene {len(st.session_state.scenes_data)} ခု ရပါတယ်*")
-            
-            # Show character reference summary
-            st.markdown("""
-            <div class="info-alert">
-                <strong>📌 Reference Characters</strong><br>
-                Scene တိုင်းမှာ Upload ထားတဲ့ Character ပုံတွေကို Reference အဖြစ် သုံးပြီး ပုံထုတ်ပါမယ်။
-            </div>
-            """, unsafe_allow_html=True)
-            
-            for i, scene in enumerate(st.session_state.scenes_data):
-                with st.expander(f"🎬 Scene {i + 1} - {', '.join(scene.get('characters', ['Unknown']))}"):
-                    st.markdown(f"**Action:** *{scene['text']}*")
-                    st.markdown(f"**Characters:** {', '.join(scene.get('characters', []))}")
-                    
-                    st.session_state.scenes_data[i]['prompt'] = st.text_area(
-                        "Image Prompt:",
-                        value=scene['prompt'],
-                        height=150,
-                        key=f"scene_prompt_{i}"
-                    )
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("⬅️ Characters ပြင်မယ်", use_container_width=True):
-                    st.session_state.step = 2
-                    st.session_state.scenes_data = []
-                    st.rerun()
-            with col2:
-                if st.button("➡️ ပုံတွေထုတ်မယ်", use_container_width=True, type="primary"):
-                    st.session_state.step = 4
-                    st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # ═══════════════════════════════════════════════════════════════
-    # STEP 4: IMAGE GENERATION WITH REFERENCE
-    # ═══════════════════════════════════════════════════════════════
-    elif st.session_state.step == 4:
-        st.markdown('<div class="glass-card animate-in">', unsafe_allow_html=True)
-        st.markdown("### 🖼️ Step 4: ပုံထုတ်ခြင်း (Reference နဲ့)")
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown("### 👤 Step 2: Characters (Optional)")
         
         st.markdown("""
         <div class="info-alert">
-            <strong>🎯 Character Consistency</strong><br>
-            Upload ထားတဲ့ Character ပုံတွေကို Reference အဖြစ်သုံးပြီး Scene ပုံတွေထုတ်ပါမယ်။
+        📌 Character ပုံတွေကို Upload လုပ်လည်းရ၊ Prompt နဲ့ Generate လုပ်လည်းရ၊ ကျော်သွားလည်းရပါတယ်။
         </div>
         """, unsafe_allow_html=True)
         
-        # Generate all images button
-        if st.button("🖼️ ပုံအားလုံး ထုတ်မယ်", use_container_width=True):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            for i, scene in enumerate(st.session_state.scenes_data):
-                status_text.text(f"Scene {i + 1}/{len(st.session_state.scenes_data)} ထုတ်နေပါတယ်...")
-                
-                # Get reference images for characters in this scene
-                ref_images = get_character_images_for_scene(
-                    scene.get('characters', []),
-                    st.session_state.characters
-                )
-                
-                # If no specific characters, use all character images
-                if not ref_images:
-                    ref_images = [c['image_data'] for c in st.session_state.characters if c.get('image_data')]
-                
-                image_data = generate_image_with_reference(
-                    client,
-                    scene['prompt'],
-                    ref_images,
-                    selected_image_model
-                )
-                
-                if image_data:
-                    st.session_state.scenes_data[i]['image_data'] = image_data
-                
-                progress_bar.progress((i + 1) / len(st.session_state.scenes_data))
-                time.sleep(1.5)  # Rate limiting
-            
-            status_text.text("✅ ပုံအားလုံး ထုတ်ပြီးပါပြီ!")
-            st.rerun()
+        # Add new character
+        with st.expander("➕ Character အသစ်ထည့်မယ်", expanded=False):
+            new_name = st.text_input("Character Name:", key="new_char_name")
+            if st.button("ထည့်မယ်") and new_name:
+                if new_name not in st.session_state.characters:
+                    st.session_state.characters[new_name] = {"prompt": "", "image_data": None, "description": ""}
+                    st.rerun()
         
-        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-        
-        # Display scenes with images
-        for i, scene in enumerate(st.session_state.scenes_data):
-            st.markdown(f"""
-            <div class="scene-card">
-                <div class="scene-number">{i + 1}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2 = st.columns([1, 1])
-            
-            with col1:
-                st.markdown(f"**Action:** *{scene['text']}*")
-                st.markdown(f"**Characters:** {', '.join(scene.get('characters', []))}")
+        # Display characters
+        if st.session_state.characters:
+            for char_name in list(st.session_state.characters.keys()):
+                char = st.session_state.characters[char_name]
                 
-                # Single scene generate button
-                if st.button(f"🖼️ ပုံထုတ်", key=f"gen_{i}", use_container_width=True):
-                    with st.spinner("ထုတ်နေပါတယ်..."):
-                        ref_images = get_character_images_for_scene(
-                            scene.get('characters', []),
-                            st.session_state.characters
-                        )
-                        if not ref_images:
-                            ref_images = [c['image_data'] for c in st.session_state.characters if c.get('image_data')]
-                        
-                        image_data = generate_image_with_reference(
-                            client,
-                            scene['prompt'],
-                            ref_images,
-                            selected_image_model
-                        )
-                        if image_data:
-                            st.session_state.scenes_data[i]['image_data'] = image_data
-                            st.rerun()
-            
-            with col2:
-                if scene.get('image_data'):
-                    b64_img = image_to_base64(scene['image_data'])
-                    st.markdown(f"""
-                    <div class="image-container">
-                        <img src="data:image/png;base64,{b64_img}" style="width: 100%; border-radius: 10px;">
-                    </div>
-                    """, unsafe_allow_html=True)
+                st.markdown(f'<div class="character-card">', unsafe_allow_html=True)
+                
+                col1, col2, col3 = st.columns([2, 2, 1])
+                
+                with col1:
+                    st.markdown(f"**🐱 {char_name}**")
                     
-                    st.download_button(
-                        "⬇️ Download",
-                        data=scene['image_data'],
-                        file_name=f"scene_{i+1}.png",
-                        mime="image/png",
-                        key=f"dl_{i}",
-                        use_container_width=True
+                    # Description input
+                    desc = st.text_input(
+                        "Description:",
+                        value=char.get('description', ''),
+                        key=f"desc_{char_name}",
+                        placeholder="ဥပမာ: ဝမ်းနည်းနေတဲ့ကြောင်လေး၊ အပြာရောင်ဟွတ်ဒီးဝတ်ထားတယ်"
                     )
-                else:
-                    st.markdown("""
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 3rem; text-align: center; color: #718096;">
-                        🖼️ ပုံမထုတ်ရသေးပါ
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.session_state.characters[char_name]['description'] = desc
+                    
+                    # Generate prompt button
+                    if st.button(f"📝 Prompt ထုတ်", key=f"gen_prompt_{char_name}"):
+                        with st.spinner("Prompt ထုတ်နေပါတယ်..."):
+                            prompt = generate_character_prompt(client, char_name, desc, model)
+                            st.session_state.characters[char_name]['prompt'] = prompt
+                            st.rerun()
+                    
+                    # Editable prompt
+                    if char.get('prompt'):
+                        st.session_state.characters[char_name]['prompt'] = st.text_area(
+                            "Image Prompt:",
+                            value=char['prompt'],
+                            height=100,
+                            key=f"prompt_{char_name}"
+                        )
+                        
+                        # Generate image button
+                        if st.button(f"🖼️ ပုံထုတ်", key=f"gen_img_{char_name}"):
+                            with st.spinner("ပုံထုတ်နေပါတယ်..."):
+                                img = generate_image(client, char['prompt'], model=img_model)
+                                if img:
+                                    st.session_state.characters[char_name]['image_data'] = img
+                                    st.session_state.image_library[char_name] = img
+                                    st.rerun()
+                
+                with col2:
+                    # Upload option
+                    st.markdown("**သို့ Upload:**")
+                    uploaded = st.file_uploader(
+                        "ပုံတင်ပါ",
+                        type=['png', 'jpg', 'jpeg', 'webp'],
+                        key=f"upload_{char_name}",
+                        label_visibility="collapsed"
+                    )
+                    if uploaded:
+                        img_data = uploaded.read()
+                        st.session_state.characters[char_name]['image_data'] = img_data
+                        st.session_state.image_library[char_name] = img_data
+                        st.rerun()
+                    
+                    # Show image if exists
+                    if char.get('image_data'):
+                        b64 = img_to_b64(char['image_data'])
+                        st.markdown(f'<img src="data:image/png;base64,{b64}" style="width:100%;max-width:150px;border-radius:8px;">', unsafe_allow_html=True)
+                        
+                        # Download button
+                        st.download_button(
+                            "⬇️ Download",
+                            data=char['image_data'],
+                            file_name=f"{char_name}.png",
+                            mime="image/png",
+                            key=f"dl_char_{char_name}"
+                        )
+                
+                with col3:
+                    if st.button("🗑️", key=f"del_{char_name}"):
+                        del st.session_state.characters[char_name]
+                        st.rerun()
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="warning-alert">Character မရှိသေးပါ။ ထည့်ပါ သို့ ကျော်သွားပါ။</div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+        st.markdown("---")
         
-        # Navigation
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("⬅️ Scene ပြင်မယ်", use_container_width=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("⬅️ Script"):
+                st.session_state.step = 1
+                st.rerun()
+        with c2:
+            if st.button("➡️ Scenes ခွဲမယ်", type="primary"):
                 st.session_state.step = 3
                 st.rerun()
-        with col2:
-            # Check if any images generated
-            has_images = any(s.get('image_data') for s in st.session_state.scenes_data)
-            if st.button("➡️ Export", use_container_width=True, type="primary", disabled=not has_images):
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 3: MANUAL SCENE SPLITTING
+    # ═══════════════════════════════════════════════════════════════
+    elif st.session_state.step == 3:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown("### 🎬 Step 3: Scene ခွဲမယ် (ကိုယ်တိုင်)")
+        
+        st.markdown("""
+        <div class="info-alert">
+        📌 Scene တစ်ခုစီကို ကိုယ်တိုင်ထည့်ပါ။ Scene တစ်ခုစီမှာ ပါဝင်မယ့် Characters ကိုလည်း ရွေးပါ။
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Show script for reference
+        with st.expander("📄 Script ကြည့်မယ်"):
+            st.text(st.session_state.script)
+        
+        # Add new scene
+        st.markdown("#### ➕ Scene အသစ်ထည့်")
+        
+        new_scene_text = st.text_area(
+            "Scene Description (Burmese):",
+            placeholder="ဥပမာ: ကြောင်လေးက မိုးထဲမှာ ဝမ်းနည်းစွာ လမ်းလျှောက်နေတယ်။",
+            key="new_scene_text",
+            height=80
+        )
+        
+        # Character selection for new scene
+        char_names = list(st.session_state.characters.keys())
+        if char_names:
+            selected_chars = st.multiselect(
+                "ဒီ Scene မှာပါတဲ့ Characters:",
+                options=char_names,
+                key="new_scene_chars"
+            )
+        else:
+            selected_chars = []
+            st.markdown('<div class="warning-alert">Character မရှိသေးပါ။ Step 2 မှာထည့်ပါ သို့ ဆက်သွားပါ။</div>', unsafe_allow_html=True)
+        
+        if st.button("➕ Scene ထည့်မယ်"):
+            if new_scene_text.strip():
+                st.session_state.scenes.append({
+                    "text": new_scene_text.strip(),
+                    "characters": selected_chars,
+                    "prompt": "",
+                    "ref_images": {},
+                    "generated_image": None,
+                    "grok_video": "",
+                    "grok_audio": ""
+                })
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Display existing scenes
+        if st.session_state.scenes:
+            st.markdown(f"#### 📋 Scenes ({len(st.session_state.scenes)} ခု)")
+            
+            for i, scene in enumerate(st.session_state.scenes):
+                with st.expander(f"Scene {i+1}: {scene['text'][:50]}...", expanded=False):
+                    # Edit scene text
+                    st.session_state.scenes[i]['text'] = st.text_area(
+                        "Description:",
+                        value=scene['text'],
+                        key=f"scene_text_{i}",
+                        height=80
+                    )
+                    
+                    # Edit characters
+                    st.session_state.scenes[i]['characters'] = st.multiselect(
+                        "Characters:",
+                        options=char_names if char_names else [],
+                        default=scene.get('characters', []),
+                        key=f"scene_chars_{i}"
+                    )
+                    
+                    # Delete button
+                    if st.button(f"🗑️ ဖျက်မယ်", key=f"del_scene_{i}"):
+                        st.session_state.scenes.pop(i)
+                        st.rerun()
+        else:
+            st.markdown('<div class="warning-alert">Scene မရှိသေးပါ။ အထက်မှာထည့်ပါ။</div>', unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("⬅️ Characters"):
+                st.session_state.step = 2
+                st.rerun()
+        with c2:
+            if st.button("➡️ Prompts & Generate", type="primary", disabled=len(st.session_state.scenes) == 0):
+                st.session_state.step = 4
+                st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 4: GENERATE IMAGES WITH PER-SCENE REFERENCES
+    # ═══════════════════════════════════════════════════════════════
+    elif st.session_state.step == 4:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown("### 🖼️ Step 4: ပုံထုတ်မယ် (Reference နဲ့)")
+        
+        st.markdown("""
+        <div class="info-alert">
+        📌 Scene တစ်ခုစီအတွက် Prompt စစ်ပြီး Reference ပုံထည့်ပါ။ ပြီးမှပုံထုတ်ပါ။
+        </div>
+        """, unsafe_allow_html=True)
+        
+        for i, scene in enumerate(st.session_state.scenes):
+            st.markdown(f'<div class="scene-card">', unsafe_allow_html=True)
+            st.markdown(f"#### Scene {i+1}")
+            st.markdown(f"**Action:** {scene['text']}")
+            
+            scene_chars = scene.get('characters', [])
+            if scene_chars:
+                st.markdown(f"**Characters:** {', '.join(scene_chars)}")
+            
+            # Generate prompt button
+            col_prompt, col_gen = st.columns([3, 1])
+            
+            with col_prompt:
+                if not scene.get('prompt'):
+                    if st.button(f"📝 Prompt ထုတ်", key=f"gen_scene_prompt_{i}"):
+                        with st.spinner("Prompt ထုတ်နေပါတယ်..."):
+                            prompt = generate_scene_prompt(client, scene['text'], scene_chars, model)
+                            st.session_state.scenes[i]['prompt'] = prompt
+                            st.rerun()
+                
+                # Editable prompt
+                if scene.get('prompt'):
+                    st.session_state.scenes[i]['prompt'] = st.text_area(
+                        "Image Prompt:",
+                        value=scene['prompt'],
+                        key=f"scene_prompt_{i}",
+                        height=120
+                    )
+            
+            # Reference images section
+            if scene_chars and scene.get('prompt'):
+                st.markdown("**🖼️ Reference ပုံများ:**")
+                
+                ref_cols = st.columns(len(scene_chars))
+                
+                for j, char_name in enumerate(scene_chars):
+                    with ref_cols[j]:
+                        st.markdown(f'<div class="ref-upload-box {"has-image" if scene.get("ref_images", {}).get(char_name) else ""}">', unsafe_allow_html=True)
+                        st.markdown(f'<div class="char-label">🐱 {char_name}</div>', unsafe_allow_html=True)
+                        
+                        # Check if image exists in library
+                        has_lib_image = char_name in st.session_state.image_library
+                        current_ref = scene.get('ref_images', {}).get(char_name)
+                        
+                        # Show current reference if exists
+                        if current_ref:
+                            b64 = img_to_b64(current_ref)
+                            st.markdown(f'<img src="data:image/png;base64,{b64}" class="char-thumb">', unsafe_allow_html=True)
+                        
+                        # Option 1: Use from library
+                        if has_lib_image:
+                            if st.button(f"📚 Library", key=f"use_lib_{i}_{j}", help="Character ပုံမှသုံးမယ်"):
+                                if 'ref_images' not in st.session_state.scenes[i]:
+                                    st.session_state.scenes[i]['ref_images'] = {}
+                                st.session_state.scenes[i]['ref_images'][char_name] = st.session_state.image_library[char_name]
+                                st.rerun()
+                        
+                        # Option 2: Upload new
+                        uploaded = st.file_uploader(
+                            "Upload",
+                            type=['png', 'jpg', 'jpeg'],
+                            key=f"ref_upload_{i}_{j}",
+                            label_visibility="collapsed"
+                        )
+                        if uploaded:
+                            if 'ref_images' not in st.session_state.scenes[i]:
+                                st.session_state.scenes[i]['ref_images'] = {}
+                            img_data = uploaded.read()
+                            st.session_state.scenes[i]['ref_images'][char_name] = img_data
+                            st.session_state.image_library[f"{char_name}_scene{i+1}"] = img_data
+                            st.rerun()
+                        
+                        st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+            
+            # Generate image section
+            col_btn, col_img = st.columns([1, 2])
+            
+            with col_btn:
+                if scene.get('prompt'):
+                    if st.button(f"🖼️ ပုံထုတ်မယ်", key=f"gen_img_{i}", use_container_width=True):
+                        with st.spinner("ပုံထုတ်နေပါတယ်..."):
+                            # Collect reference images
+                            ref_imgs = list(scene.get('ref_images', {}).values())
+                            
+                            img = generate_image(client, scene['prompt'], ref_imgs if ref_imgs else None, img_model)
+                            if img:
+                                st.session_state.scenes[i]['generated_image'] = img
+                                st.rerun()
+            
+            with col_img:
+                if scene.get('generated_image'):
+                    b64 = img_to_b64(scene['generated_image'])
+                    st.markdown(f'<div class="image-container"><img src="data:image/png;base64,{b64}" style="width:100%;border-radius:8px;"></div>', unsafe_allow_html=True)
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.download_button(
+                            "⬇️ Download",
+                            data=scene['generated_image'],
+                            file_name=f"scene_{i+1}.png",
+                            mime="image/png",
+                            key=f"dl_scene_{i}"
+                        )
+                    with c2:
+                        if st.button(f"🎥 Grok Export", key=f"grok_{i}"):
+                            with st.spinner("Grok prompts..."):
+                                grok = generate_grok_prompts(client, scene['prompt'], model)
+                                st.session_state.scenes[i]['grok_video'] = grok['video']
+                                st.session_state.scenes[i]['grok_audio'] = grok['audio']
+                                st.rerun()
+                    
+                    # Show Grok prompts if generated
+                    if scene.get('grok_video') or scene.get('grok_audio'):
+                        st.markdown("**🎥 Grok Prompts:**")
+                        st.text_area("Video:", scene.get('grok_video', ''), height=60, key=f"grok_v_{i}")
+                        st.text_area("Audio:", scene.get('grok_audio', ''), height=60, key=f"grok_a_{i}")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Generate all button
+        if st.button("🖼️ အားလုံးထုတ်မယ်", use_container_width=True):
+            progress = st.progress(0)
+            for i, scene in enumerate(st.session_state.scenes):
+                if scene.get('prompt') and not scene.get('generated_image'):
+                    ref_imgs = list(scene.get('ref_images', {}).values())
+                    img = generate_image(client, scene['prompt'], ref_imgs if ref_imgs else None, img_model)
+                    if img:
+                        st.session_state.scenes[i]['generated_image'] = img
+                    time.sleep(1.5)
+                progress.progress((i + 1) / len(st.session_state.scenes))
+            st.rerun()
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("⬅️ Scenes ပြင်မယ်"):
+                st.session_state.step = 3
+                st.rerun()
+        with c2:
+            if st.button("➡️ Final Export", type="primary"):
                 st.session_state.step = 5
                 st.rerun()
         
@@ -1129,75 +856,55 @@ def main():
     # STEP 5: FINAL EXPORT
     # ═══════════════════════════════════════════════════════════════
     elif st.session_state.step == 5:
-        st.markdown('<div class="glass-card animate-in">', unsafe_allow_html=True)
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         st.markdown("### 🎥 Step 5: Final Export")
         
-        # Generate Grok prompts
-        if not st.session_state.final_data:
-            with st.spinner("Grok prompts ထုတ်နေပါတယ်..."):
-                finals = []
-                for scene in st.session_state.scenes_data:
-                    grok_prompts = generate_grok_prompts(client, scene['prompt'], selected_model)
-                    finals.append({
-                        **scene,
-                        "video_prompt": grok_prompts.get("video", ""),
-                        "audio_prompt": grok_prompts.get("audio", "")
-                    })
-                st.session_state.final_data = finals
-                st.rerun()
+        st.markdown('<div class="success-alert">✅ Export အဆင်သင့်ဖြစ်ပါပြီ!</div>', unsafe_allow_html=True)
         
-        st.markdown("""
-        <div class="success-alert">
-            ✅ <strong>Export အဆင်သင့်!</strong> ပုံတွေ Download လုပ်ပြီး Grok AI မှာ video လုပ်နိုင်ပါပြီ။
-        </div>
-        """, unsafe_allow_html=True)
+        # Generate all Grok prompts if not done
+        for i, scene in enumerate(st.session_state.scenes):
+            if scene.get('generated_image') and not scene.get('grok_video'):
+                grok = generate_grok_prompts(client, scene.get('prompt', ''), model)
+                st.session_state.scenes[i]['grok_video'] = grok['video']
+                st.session_state.scenes[i]['grok_audio'] = grok['audio']
         
-        for i, item in enumerate(st.session_state.final_data):
-            st.markdown(f"#### Scene {i + 1}")
+        for i, scene in enumerate(st.session_state.scenes):
+            st.markdown(f"#### Scene {i+1}")
             
-            col1, col2 = st.columns([1, 2])
+            c1, c2 = st.columns([1, 2])
             
-            with col1:
-                if item.get('image_data'):
-                    b64_img = image_to_base64(item['image_data'])
-                    st.markdown(f"""
-                    <div class="image-container">
-                        <img src="data:image/png;base64,{b64_img}" style="width: 100%; border-radius: 10px;">
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
+            with c1:
+                if scene.get('generated_image'):
+                    b64 = img_to_b64(scene['generated_image'])
+                    st.markdown(f'<img src="data:image/png;base64,{b64}" style="width:100%;border-radius:8px;">', unsafe_allow_html=True)
                     st.download_button(
                         "⬇️ Download",
-                        data=item['image_data'],
+                        data=scene['generated_image'],
                         file_name=f"final_scene_{i+1}.png",
                         mime="image/png",
-                        key=f"final_dl_{i}",
-                        use_container_width=True
+                        key=f"final_dl_{i}"
                     )
+                else:
+                    st.warning("ပုံမထုတ်ရသေးပါ")
             
-            with col2:
-                st.text_area("🎥 Video Prompt", item.get('video_prompt', ''), height=80, key=f"vid_{i}")
-                st.text_area("🔊 Audio Prompt", item.get('audio_prompt', ''), height=80, key=f"aud_{i}")
+            with c2:
+                st.text_area("🎥 Video Prompt:", scene.get('grok_video', ''), height=70, key=f"exp_v_{i}")
+                st.text_area("🔊 Audio Prompt:", scene.get('grok_audio', ''), height=70, key=f"exp_a_{i}")
             
-            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
         
-        # Navigation
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("⬅️ ပုံတွေပြင်မယ်", use_container_width=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("⬅️ ပြင်ဆင်မယ်"):
                 st.session_state.step = 4
-                st.session_state.final_data = []
                 st.rerun()
-        with col2:
-            if st.button("🔄 အစကနေပြန်စမယ်", use_container_width=True):
-                st.session_state.clear()
+        with c2:
+            if st.button("🔄 အစကနေပြန်စမယ်"):
+                for key in defaults:
+                    st.session_state[key] = defaults[key] if not isinstance(defaults[key], (dict, list)) else type(defaults[key])()
                 st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════════════════════════════
-# 🏃 RUN APPLICATION
-# ═══════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
     main()
